@@ -1,5 +1,6 @@
 #include "../drivers/terminal.h"
 #include "../drivers/keyboard.h"
+extern void load_tss(void);
 
 extern void load_idt(void); // load idt import from asm idt.S
 extern void isr0(void);
@@ -80,7 +81,7 @@ struct GDTEntry{ // for 32 bit protected mode
     unsigned char base_high; // 24-31 of address
 };
 
-struct GDTEntry gdt[3]; // 0 null descriptor 0x00, 1 kernel code 0x08, 2 kernel data 0x10
+struct GDTEntry gdt[6]; // 0 null descriptor 0x00, 1 kernel code 0x08, 2 kernel data 0x10
 
 struct GDTR {
     unsigned short limit;
@@ -123,6 +124,38 @@ static const char *exception_names[32] = {
     "Reserved",
     "Reserved"
 }; // error codes
+
+struct TSS {
+	unsigned int prev_tss;
+	unsigned int esp0; // kernel stack address
+	unsigned int ss0; // kernel data sector (useful to return to ring 0)
+	unsigned int esp1;
+	unsigned int ss1;
+	unsigned int esp2;
+	unsigned int ss2;
+	unsigned int cr3;
+	unsigned int eip;
+	unsigned int eflags;
+	unsigned int eax;
+	unsigned int ecx;
+	unsigned int edx;
+	unsigned int ebx;
+	unsigned int esp;
+	unsigned int ebp;
+	unsigned int esi;
+	unsigned int edi;
+	unsigned int es;
+	unsigned int cs;
+	unsigned int ss;
+	unsigned int ds;
+	unsigned int fs;
+	unsigned int gs;
+	unsigned int ldt;
+	unsigned short trap;
+	unsigned short iomap_base;
+} __attribute__((packed));
+
+struct TSS tss;
 
 static void set_idt_gate(int vector, unsigned int address) {
     idt[vector].offset_low = address & 0xFFFF;
@@ -187,6 +220,8 @@ void initialise_IDT(void){
 
 }
 
+unsigned char kernel_stack[4096]; // 4KB
+
 void initialise_GDT(void) {
     print("GDT A\n");
     gdtr.limit = sizeof(gdt) - 1;
@@ -202,9 +237,17 @@ void initialise_GDT(void) {
     putchar(' ');
     print_hex_byte((gdtr.limit >> 8) & 0xFF);
     putchar('\n');
+
+    tss.esp0 = (unsigned int)&kernel_stack[4096];
+    tss.ss0 = 0x10;
  
     // cuz base = 0x00000000 and cuz granularity = 0xCF it's 4 KiB units so max 0xFFFFF
-    
+    // gdt[0] = null
+    // gdt[1] = kernel code
+    // gdt[2] = kernel data
+    // gdt[3] = user code
+    // gdt[4] = user data
+    // gdt[5] = tss
     gdt[1].access = 0x9A;
     gdt[1].limit_low = 0xFFFF;
     gdt[1].granularity = 0xCF;
@@ -218,18 +261,31 @@ void initialise_GDT(void) {
     gdt[2].base_low = 0;
     gdt[2].base_middle = 0;
     gdt[2].base_high = 0;
-    
-    unsigned char *bytes = (unsigned char *)&gdt[2];
 
-    for (int i = 0; i < 8; i++) {
-        print_hex_byte(bytes[i]);
-        putchar(' ');
-    }
+    gdt[3].access = 0xFA; // 0xFA = user code
+    gdt[3].limit_low = 0xFFFF;
+    gdt[3].base_low = 0;
+    gdt[3].base_middle = 0;
+    gdt[3].base_high = 0;
 
-    putchar('\n');
-    clear();
+    gdt[4].access = 0xF2; // 0xF2 = user data
+    gdt[4].limit_low = 0xFFFF;
+    gdt[4].base_low = 0;
+    gdt[4].base_middle = 0;
+    gdt[4].base_high = 0;
+
+    unsigned int tss_base = (unsigned int)&tss;
+    unsigned int tss_limit = sizeof(tss) - 1;
+
+    gdt[5].limit_low = tss_limit & 0xFFFF;
+    gdt[5].base_low = tss_base & 0xFFFF;
+    gdt[5].base_middle = (tss_base >> 16) & 0x0F;
+    gdt[5].access = 0x89;
+    gdt[5].granularity = (tss_limit >> 16) & 0x0F;
+    gdt[5].base_high = (tss_base >> 24) & 0xFF;
 
     load_gdt();
+    load_tss();
 }
 
 void exception_handler(unsigned int exception, unsigned int error_code)
@@ -257,4 +313,8 @@ void irq_handler(unsigned int irq){
     }
 
     outb(0x20, 0x20);
+}
+
+void cpu_halt(void){
+	__asm__ volatile ("hlt");
 }

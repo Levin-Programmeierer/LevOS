@@ -15,12 +15,19 @@ OBJS = \
 	build/shell.o \
 	build/paging.o \
 	build/paging_asm.o \
-	build/pmm.o
+	build/pmm.o \
+	build/user.o
 
-all: os.iso
+all: os.iso build/user.bin
 
 build/boot.o: src/boot/boot.S
 	$(CC) $(CFLAGS) -c $< -o $@
+
+build/user.o: src/user/user.S
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/user.bin: build/user.o
+	objcopy -O binary -j .text $< $@
 
 build/kernel.o: src/kernel.c
 	$(CC) $(CFLAGS) -c $< -o $@

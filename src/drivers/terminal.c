@@ -46,8 +46,7 @@ void clear(void){
     cursor_y = 0;
 }
 
-void backspace(void)
-{
+void backspace(void){
     if (cursor_x > 0) {
         cursor_x--;
         video[cursor_y * 80 + cursor_x] = 0x0F20;

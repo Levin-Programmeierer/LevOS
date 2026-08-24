@@ -1,5 +1,6 @@
 .global load_idt
 .global load_gdt
+.global load_tss
 .extern idtr
 .extern gdtr
 .extern exception_handler
@@ -17,6 +18,11 @@ load_gdt:
     pushl $0x08
     pushl $reload_segments
     lret
+
+load_tss:
+	mov $0x28, %ax
+	ltr %ax
+	ret
 
 reload_segments:
     # Reload data segment registers

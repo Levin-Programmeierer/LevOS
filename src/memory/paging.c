@@ -14,42 +14,80 @@ void init_paging(void){
     load_page_directory(page_directory);
 }
 
-void map_page(unsigned int virtual_address, unsigned int physical_address){
+void map_page(unsigned int virtual_address, unsigned int physical_address, unsigned char mode){
+	if(mode == 'K'){
+		unsigned int directory_index =
+			(virtual_address >> 22) & 0x3FF;
 
-	unsigned int directory_index =
-		(virtual_address >> 22) & 0x3FF;
+		unsigned int table_index =
+			(virtual_address >> 12) & 0x3FF;
 
-	unsigned int table_index =
-		(virtual_address >> 12) & 0x3FF;
+		unsigned int aligned_address =
+			physical_address & 0xFFFFF000;
 
-	unsigned int aligned_address =
-		physical_address & 0xFFFFF000;
+		unsigned int *table;
 
-	unsigned int *table;
+		if((page_directory[directory_index] & 0x01) == 1){
 
-	if((page_directory[directory_index] & 0x01) == 1){
+			table = (unsigned int *)
+				(page_directory[directory_index] & 0xFFFFF000);
 
-		table = (unsigned int *)
-			(page_directory[directory_index] & 0xFFFFF000);
+		}else{
 
-	}else{
+			unsigned int new_page_table_address =
+				allocate_page();
 
-		unsigned int new_page_table_address =
-			allocate_page();
+			table = (unsigned int *)new_page_table_address;
 
-		table = (unsigned int *)new_page_table_address;
+			for(int i = 0; i < 1024; i++){
 
-		for(int i = 0; i < 1024; i++){
+				table[i] = 0;
 
-			table[i] = 0;
+			}
 
+			page_directory[directory_index] =
+				new_page_table_address | 0x03;
+	
 		}
 
-		page_directory[directory_index] =
-			new_page_table_address | 0x03;
-	}
+		table[table_index] = aligned_address | 0x03;
+	}else if(mode == 'U'){
+		unsigned int directory_index =
+			(virtual_address >> 22) & 0x3FF;
 
-	table[table_index] = aligned_address | 0x03;
+		unsigned int table_index =
+			(virtual_address >> 12) & 0x3FF;
+
+		unsigned int aligned_address =
+			physical_address & 0xFFFFF000;
+
+		unsigned int *table;
+
+		if((page_directory[directory_index] & 0x04) == 0x04){
+
+			table = (unsigned int *)
+				(page_directory[directory_index] & 0xFFFFF000);
+
+		}else{
+
+			unsigned int new_page_table_address =
+				allocate_page();
+
+			table = (unsigned int *)new_page_table_address;
+
+			for(int i = 0; i < 1024; i++){
+
+				table[i] = 0;
+
+			}
+
+			page_directory[directory_index] =
+				new_page_table_address | 0x07;
+	
+		}
+
+		table[table_index] = aligned_address | 0x07;
+	}
 }
 
 void reload_page_directory(void){

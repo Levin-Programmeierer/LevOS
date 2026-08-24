@@ -10,9 +10,9 @@ extern void load_idt(void);
 extern void enable_paging(void);
 
 void kernel_main(void) {
-	print("Initialising GDT...\n\0");
+	print("Initialising GDT...\n");
 	initialise_GDT();
-	print("Initialising IDT...\n\0");
+	print("Initialising IDT...\n");
 	initialise_IDT();
 	picremap();
 	load_idt();
@@ -21,9 +21,12 @@ void kernel_main(void) {
 	enable_paging();
 
 	unsigned int page1 = allocate_page();
+	unsigned int user_code = allocate_page();
+	unsigned int user_data = allocate_page();
 
-	map_page(0x00200000, page1);
-	map_page(0x00400000, page1);
+	map_page(0x00200000, page1, 'K');
+	map_page(0x00400000, user_code, 'U');
+	map_page(0x00800000, user_data, 'U');
 
 	reload_page_directory();
 
@@ -41,8 +44,8 @@ void kernel_main(void) {
 	print("\nPhysical: ");
 	print_hex_dword(*physical);
 
-	print("LevShell 0.1\n\n\0");
-	print("> \0");
+	print("LevShell 0.1\n\n");
+	print("> ");
 
 	__asm__ volatile ("sti");
 	shell();
