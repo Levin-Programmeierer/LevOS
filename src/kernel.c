@@ -5,79 +5,50 @@
 #include "memory/paging.h"
 #include "memory/pmm.h"
 #include "process/process.h"
+#include "drivers/io.h"
+#include "cpu/timer.h"
 
 extern unsigned char _binary_build_user_bin_start[];
 extern unsigned char _binary_build_user_bin_end[];
 
 extern void load_idt(void);
 extern void enable_paging(void);
+extern void picremap(void);
+
+extern unsigned char LIGHT_BLUE;
+extern unsigned char LIGHT_CYAN;
+extern unsigned char LIGHT_GREEN;
+extern unsigned char LIGHT_RED;
+extern unsigned char LIGHT_PURPLE;
+extern unsigned char WHITE;
+extern unsigned char RED;
+extern unsigned char BLUE;
+extern unsigned char GREEN;
+extern unsigned char CYAN;
+extern unsigned char BROWN;
+extern unsigned char PURPLE;
+extern unsigned char YELLOW;
+extern unsigned char DARK_GRAY;
+extern unsigned char GRAY;
 
 void kernel_main(void) {
-    print("Initialising GDT...\n");
+    terminal_init();
+    print("Initialising GDT\n", WHITE);
     initialise_GDT();
-
-    print("Initialising IDT...\n");
+    print("Initialising IDT\n", WHITE);
     initialise_IDT();
-
-    print("Remapping PIC...\n");
+    print("Remapping PIC\n", WHITE);
     picremap();
-
+    print("Loading IDT\n", WHITE);
     load_idt();
-
-    print("PIC MASK: ");
-    print_hex_byte(inb(0x21));
-    print("\n");
-
-    print("Initialising keyboard...\n");
+    enable_interrupts();
+    print("Initialising Keyboard\n", YELLOW);
     init_keyboard();
-
-    print("Initialising PIT...\n");
+    print("Initialising timer\n", WHITE);
     timer_init(100);
-
-    __asm__ volatile ("sti");
-
-    unsigned int flags;
-
-    __asm__ volatile (
-        "pushf\n"
-        "pop %0"
-        : "=r"(flags)
-    );
-
-    print("EFLAGS: ");
-    print_hex_dword(flags);
-    print("\n");
-
-    print("Waiting for IRQ0...\n");
-
-    while (1) {
-        unsigned char irr;
-        unsigned char isr;
-        unsigned char imr;
-
-        outb(0x20, 0x0A);
-        irr = inb(0x20);
-
-        outb(0x20, 0x0B);
-        isr = inb(0x20);
-
-        imr = inb(0x21);
-
-        if (irr & 0x01) {
-            print("IRR0 ");
-            print_hex_byte(irr);
-
-            print(" ISR ");
-            print_hex_byte(isr);
-
-            print(" IMR ");
-            print_hex_byte(imr);
-
-            print("\n");
-        }
-
-        __asm__ volatile ("hlt");
-    }
+    print("\nStarting shell\n", GREEN);
+    clear();
+    shell();
 }
 
 

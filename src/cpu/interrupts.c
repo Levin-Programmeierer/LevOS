@@ -1,6 +1,7 @@
 #include "../drivers/terminal.h"
 #include "../drivers/keyboard.h"
 #include "../cpu/timer.h"
+#include "../drivers/io.h"
 
 extern void load_tss(void);
 
@@ -56,6 +57,22 @@ extern void irq12(void);
 extern void irq13(void);
 extern void irq14(void);
 extern void irq15(void);
+
+extern unsigned char LIGHT_BLUE;
+extern unsigned char LIGHT_CYAN;
+extern unsigned char LIGHT_GREEN;
+extern unsigned char LIGHT_RED;
+extern unsigned char LIGHT_PURPLE;
+extern unsigned char WHITE;
+extern unsigned char RED;
+extern unsigned char BLUE;
+extern unsigned char GREEN;
+extern unsigned char CYAN;
+extern unsigned char BROWN;
+extern unsigned char PURPLE;
+extern unsigned char YELLOW;
+extern unsigned char DARK_GRAY;
+extern unsigned char GRAY;
 
 struct IDTEntry {
     unsigned short offset_low;
@@ -220,24 +237,21 @@ void initialise_IDT(void){
     set_idt_gate(45, (unsigned int)irq13);
     set_idt_gate(46, (unsigned int)irq14);
     set_idt_gate(47, (unsigned int)irq15);
-    set_idt_gate(128, (unsigned int)syscall128);
-    idt[128].type_attributes = 0xEE;
-
 }
 
 unsigned char kernel_stack[4096]; // 4KB
 
 void initialise_GDT(void) {
-    print("GDT A\n");
+    print("GDT A\n", WHITE);
     gdtr.limit = sizeof(gdt) - 1;
     gdtr.base = (unsigned int) &gdt[0];
-    print("GDT B\n");
+    print("GDT B\n", WHITE);
 
-    print("GDT size: ");
+    print("GDT size: ", WHITE);
     print_hex_byte(sizeof(gdt));
     putchar('\n');
 
-    print("GDTR limit: ");
+    print("GDTR limit: ", WHITE);
     print_hex_byte(gdtr.limit & 0xFF);
     putchar(' ');
     print_hex_byte((gdtr.limit >> 8) & 0xFF);
@@ -296,13 +310,13 @@ void initialise_GDT(void) {
 }
 
 void exception_handler(unsigned int exception, unsigned int error_code) {
-    print("EXCEPTION: ");
-    print(exception_names[exception]);
-    print("\n");
+    print("EXCEPTION: ", RED);
+    print(exception_names[exception], WHITE);
+    print("\n", WHITE);
 
-    print("ERROR CODE: ");
+    print("ERROR CODE: ", RED);
     print_hex_dword(error_code);
-    print("\n");
+    print("\n", WHITE);
 
     while (1) {
         asm volatile ("hlt");
@@ -311,19 +325,12 @@ void exception_handler(unsigned int exception, unsigned int error_code) {
 
 void irq_handler(unsigned int irq) {
     if (irq == 0) {
-        putchar('T');
         timer_handler();
     }
-
-    if (irq == 1) {
+    else if (irq == 1) {
         keyboard_irq();
     }
-
-    if (irq >= 8) {
-        outb(0xA0, 0x20);
-    }
-
-    outb(0x20, 0x20);
+    end_interrupt();
 }
 
 void cpu_halt(void){

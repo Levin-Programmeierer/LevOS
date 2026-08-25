@@ -7,9 +7,9 @@ static unsigned int ticks = 0;
 void timer_init(unsigned int frequency) {
     unsigned int divisor = 1193180 / frequency;
 
-    print("PIT divisor: ");
+    print("PIT divisor: ", 0xAA);
     print_hex_dword(divisor);
-    print("\n");
+    print("\n", 0xAA);
 
     outb(0x43, 0x36);
 
@@ -20,7 +20,6 @@ void timer_handler(void) {
     ticks++;
 
     if ((ticks % 100) == 0) {
-        print(".");
     }
 }
 

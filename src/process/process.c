@@ -2,11 +2,28 @@
 #include "memory/paging.h"
 #include "memory/pmm.h"
 #include "drivers/terminal.h"
+#include "drivers/keyboard.h"
 
 static struct process processes[MAX_PROCESSES];
 
 static unsigned int next_pid = 1;
 
+
+extern unsigned char LIGHT_BLUE;
+extern unsigned char LIGHT_CYAN;
+extern unsigned char LIGHT_GREEN;
+extern unsigned char LIGHT_RED;
+extern unsigned char LIGHT_PURPLE;
+extern unsigned char WHITE;
+extern unsigned char RED;
+extern unsigned char BLUE;
+extern unsigned char GREEN;
+extern unsigned char CYAN;
+extern unsigned char BROWN;
+extern unsigned char PURPLE;
+extern unsigned char YELLOW;
+extern unsigned char DARK_GRAY;
+extern unsigned char GRAY;
 
 // chatgpt copied function cuz assembly
 static void enter_user_process(unsigned int entry_point, unsigned int user_stack) {
@@ -45,7 +62,7 @@ static void enter_user_process(unsigned int entry_point, unsigned int user_stack
 
 
 void process_init(void) {
-    print("process_init A\n");
+    print("process_init A\n", WHITE);
 
     for (int i = 0; i < MAX_PROCESSES; i++) {
         processes[i].pid = 0;
@@ -59,7 +76,7 @@ void process_init(void) {
 
     next_pid = 1;
 
-    print("process_init done\n");
+    print("process_init done\n", WHITE);
 }
 
 int process_create(unsigned char *program, unsigned int size) {
@@ -73,16 +90,16 @@ int process_create(unsigned char *program, unsigned int size) {
     }
 
     if (slot == -1) {
-        print("ERROR: process table full\n");
+        print("ERROR: process table full\n", WHITE);
         return -1;
     }
 
     unsigned int code_pages =
         (size + 4095) / 4096;
 
-    print("Code pages: ");
+    print("Code pages: ", WHITE);
     print_hex_dword(code_pages);
-    print("\n");
+    print("\n", WHITE);
 
     for (unsigned int i = 0; i < code_pages; i++) {
 
@@ -138,13 +155,13 @@ int process_create(unsigned char *program, unsigned int size) {
     processes[slot].ebp =
         0x00801000;
 
-    print("Created process PID ");
+    print("Created process PID ", WHITE);
 
     print_hex_dword(
         processes[slot].pid
     );
 
-    print("\n");
+    print("\n", WHITE);
 
     return processes[slot].pid;
 }
@@ -163,17 +180,17 @@ void process_run(int pid) {
     }
 
     if (process == 0) {
-        print("ERROR: process not found\n");
+        print("ERROR: process not found\n", WHITE);
         return;
     }
 
-    print("Running PID ");
+    print("Running PID ", WHITE);
 
     print_hex_dword(
         process->pid
     );
 
-    print("\n");
+    print("\n", WHITE);
 
     process->state = PROCESS_RUNNING;
 
@@ -190,7 +207,7 @@ void process_run(int pid) {
 
 void process_exit(void)
 {
-    print("\nProcess exited.\n");
+    print("\nProcess exited.\n", WHITE);
 
     while (1) {
         __asm__ volatile ("hlt");

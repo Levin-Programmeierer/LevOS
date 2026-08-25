@@ -3,11 +3,9 @@
 #include "drivers/terminal.h"
 
 #define KEYBOARD_BUFFER_SIZE 128
-
 static volatile char keyboard_buffer[KEYBOARD_BUFFER_SIZE];
 static volatile unsigned int buffer_head = 0;
 static volatile unsigned int buffer_tail = 0;
-
 char table[256] = {
     [0x10] = 'q',
     [0x11] = 'w',
@@ -65,6 +63,14 @@ static void keyboard_buffer_put(char c){
     buffer_head = next;
 }
 
+char scancode_to_ascii(unsigned char scancode){
+    if(table[scancode] != 0){
+            return table[scancode];
+        } else {
+            return (char)0;
+    }
+}
+
 void keyboard_irq(){
     unsigned char scancode = inb(0x60); // get scancode
     if((scancode & 0x80) == 0){ // key press
@@ -75,14 +81,8 @@ void keyboard_irq(){
     }
 }
 
-char scancode_to_ascii(unsigned char scancode){
-    if(table[scancode] != 0){
-            return table[scancode];
-        } else {
-            return (char)0;
-    }
-}
-
 void init_keyboard(void){
-    outb(0x21, 0xFD);
+    unsigned char mask = inb(0x21);
+    mask &= ~(1 << 1);
+    outb(0x21, mask);
 }

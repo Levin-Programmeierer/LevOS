@@ -36,19 +36,6 @@ reload_segments:
 
     ret
 
-.global isr128
-
-isr128:
-    pusha
-
-    pushl %ebx
-    pushl %eax
-    call syscall_handler
-    addl $8, %esp
-
-    popa
-    iret
-
 .macro ISR_NOERR n
 .global isr\n
 
@@ -120,11 +107,9 @@ common_isr:
 .global irq\n
 irq\n:
     pusha
-
     pushl $\n
     call irq_handler
     addl $4, %esp
-
     popa
     iret
 .endm
@@ -145,16 +130,6 @@ IRQ_STUB 12
 IRQ_STUB 13
 IRQ_STUB 14
 IRQ_STUB 15
-
-.extern syscall_handler
-
-.global syscall128
-
-syscall128:
-    pushl $0
-    pushl $128
-    jmp common_syscall
-
 
 common_syscall:
     pusha

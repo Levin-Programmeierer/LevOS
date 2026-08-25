@@ -10,7 +10,25 @@ char command[COMMAND_SIZE];
 char argument[PARAMETER_SIZE];
 unsigned int command_length = 0;
 
+extern unsigned char LIGHT_BLUE;
+extern unsigned char LIGHT_CYAN;
+extern unsigned char LIGHT_GREEN;
+extern unsigned char LIGHT_RED;
+extern unsigned char LIGHT_PURPLE;
+extern unsigned char WHITE;
+extern unsigned char RED;
+extern unsigned char BLUE;
+extern unsigned char GREEN;
+extern unsigned char CYAN;
+extern unsigned char BROWN;
+extern unsigned char PURPLE;
+extern unsigned char YELLOW;
+extern unsigned char DARK_GRAY;
+extern unsigned char GRAY;
+
 void shell(void){
+    print("----------------------------------LevShell 0.1----------------------------------", (BLUE << 4) | WHITE); // 12 characters long
+    print("\n> ", WHITE);
     for (;;) {
         char c = keyboard_getchar();
 
@@ -23,7 +41,7 @@ void shell(void){
             command_buffer[command_length] = '\0';
             process_command();
             command_length = 0;
-            print("\n> ");
+            print("\n> ", 0x0F);
         }
         else if (c == '\b') {
             if (command_length > 0) {
@@ -44,24 +62,40 @@ void process_command(void){
     split_command(command_buffer, command, argument);
     putchar('\n');
     if (strcmp(command_buffer, "help") == 0) {
-        print("Available commands:");
-        print("\nhelp -- this command");
-        print("\nclear -- clears the screen");
+        print("Available commands:", YELLOW);
+        print("\nhelp -- this command", WHITE);
+        print("\nclear -- clears the screen", WHITE);
+        print("\nabout -- shows information about this OS", WHITE);
     }
     else if (strcmp(command_buffer, "clear") == 0) {
         clear();
+        print("----------------------------------LevShell 0.1----------------------------------", (BLUE << 4) | WHITE);
     }
     else if(strcmp(command, "echo") == 0){
-        print(argument);
+        print(argument, 0xAA);
     } 
     else if(strcmp(command_buffer, "about") == 0){
-        print("--LevOS - Shell 0.1--");
-        print("\nWork in progress");
+        print("--LevOS - Shell 0.1--", YELLOW);
+        print("\nWork in progress\n", RED);
+        print(".", (WHITE << 4));
+        print(".", (RED << 4));
+        print(".", (YELLOW << 4));
+        print(".", (BLUE << 4));
+        print(".", (GREEN << 4));
+        print(".", (CYAN << 4));
+        print(".", (BROWN << 4));
+        print("\n.", (LIGHT_BLUE << 4));
+        print(".", (LIGHT_CYAN << 4));
+        print(".", (LIGHT_RED << 4));
+        print(".", (LIGHT_GREEN << 4));
+        print(".", (GRAY << 4));
+        print(".", (DARK_GRAY << 4));
+        print(".", (LIGHT_PURPLE << 4));
     }
     
     else {
-        print("Unknown command: ");
-        print(command);
+        print("Unknown command: ", 0xAA);
+        print(command, 0xAA);
     }
 }
 

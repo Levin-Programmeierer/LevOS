@@ -16,10 +16,9 @@ OBJS = \
 	build/paging.o \
 	build/paging_asm.o \
 	build/pmm.o \
-	build/user_binary.o \
 	build/process.o \
 	build/syscalls.o \
-	build/timer.o
+	build/timer.o 
 
 all: os.iso build/user.bin
 

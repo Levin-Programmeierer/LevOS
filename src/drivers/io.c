@@ -1,4 +1,12 @@
 #include "io.h"
+// Defines from OSDEV wiki
+#define PIC1		0x20
+#define PIC2		0xA0
+#define PIC1_COMMAND	PIC1
+#define PIC1_DATA	(PIC1+1)
+#define PIC2_COMMAND	PIC2
+#define PIC2_DATA	(PIC2+1)
+
 
 unsigned char inb(unsigned short port){
     unsigned char value;
@@ -20,22 +28,29 @@ void outb(unsigned short port, unsigned char value){
     );
 }
 
-void picremap(void)
-{
-    outb(0x20, 0x11);
-    outb(0xA0, 0x11);
+void picremap(void) {
+    // goal: remap pic to 32-47 so in hex 0x20 to 0x2F 
+    outb(PIC1_COMMAND, 0x11); // initialisation sequence
+    outb(PIC2_COMMAND, 0x11); // initialisation sequence
 
-    outb(0x21, 0x20);
-    outb(0xA1, 0x28);
+    outb(PIC1_DATA, 0x20); // set PIC1 start at 0x20 so it gets 32-39
+    outb(PIC2_DATA, 0x28); // set PIC2 start at 0x28 so it gets 40-47
 
-    outb(0x21, 0x04);
-    outb(0xA1, 0x02);
+    outb(PIC1_DATA, 0x04); // tell that g that he got slave at 4
+    outb(PIC2_DATA, 0x02); // tell that g he is a slave and his master is at 2
 
-    outb(0x21, 0x01);
-    outb(0xA1, 0x01);
+    outb(PIC1_DATA, 0x01);
+    outb(PIC2_DATA, 0x01); // tell these bros to run at 8086 mode
 
-    outb(0x21, 0xFC);
-    outb(0xA1, 0xFF);
+    outb(PIC1_DATA, 0xFC); // tell these gangsters to take those masks off
+    outb(PIC2_DATA, 0xFF);
+}
+
+void end_interrupt(unsigned int irq){
+    if(irq >= 8) // set PIC 2 here
+        outb(PIC2_COMMAND, 0x20);
+    
+    outb(PIC1_COMMAND, 0x20);
 }
 
 unsigned char pic_get_irr(void) {
