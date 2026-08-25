@@ -1,6 +1,8 @@
-#include "timer.h"
+#include "cpu/timer.h"
 #include "drivers/io.h"
 #include "drivers/terminal.h"
+#include "cpu/interrupts.h"
+#include "process/process.h"
 
 static unsigned int ticks = 0;
 
@@ -16,11 +18,10 @@ void timer_init(unsigned int frequency) {
     outb(0x40, divisor & 0xFF);
     outb(0x40, (divisor >> 8) & 0xFF);
 }
-void timer_handler(void) {
+struct cpu_context *timer_handler(struct cpu_context *context){
     ticks++;
 
-    if ((ticks % 100) == 0) {
-    }
+    return scheduler_tick(context);
 }
 
 unsigned int timer_ticks(void) {

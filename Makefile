@@ -12,13 +12,18 @@ OBJS = \
 	build/io.o \
 	build/idt.o \
 	build/interrupts.o \
-	build/shell.o \
 	build/paging.o \
 	build/paging_asm.o \
 	build/pmm.o \
 	build/process.o \
 	build/syscalls.o \
-	build/timer.o 
+	build/timer.o \
+	build/scheduler.o \
+	build/user_binary.o \
+	build/framebuffer_driver.o \
+	build/font.o \
+	build/font_driver.o \
+	build/graphicsshell.o
 
 all: os.iso build/user.bin
 
@@ -34,12 +39,18 @@ build/syscalls.o: src/cpu/syscalls.c
 build/process.o: src/process/process.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+build/framebuffer_driver.o: src/drivers/framebuffer_driver.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 build/timer.o: src/cpu/timer.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/user.bin: src/user/user.S
 	$(CC) $(CFLAGS) -c $< -o build/user.o
 	ld -m elf_i386 -Ttext 0x00400000 --oformat binary -o $@ build/user.o
+
+build/scheduler.o: src/process/scheduler.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 build/kernel.o: src/kernel.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -74,13 +85,23 @@ build/pmm.o: src/memory/pmm.c
 build/kernel.bin: $(OBJS)
 	ld $(LDFLAGS) -o $@ $(OBJS)
 
+build/font.o: fonts/cp865-8x16.psf
+	objcopy -I binary -O elf32-i386 -B i386 $< $@
+
+build/font_driver.o: src/drivers/font.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/graphicsshell.o: src/shell/graphicsshell.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 os.iso: build/kernel.bin
-	mkdir -p iso/boot
+	mkdir -p iso/boot/grub
 	cp build/kernel.bin iso/boot/kernel.bin
+	cp grub.cfg iso/boot/grub/grub.cfg
 	grub-mkrescue -o $@ iso
 
 clean:
 	rm -f build/*.o build/kernel.bin os.iso
 
 run: os.iso
-	qemu-system-i386 -cdrom os.iso
+	qemu-system-i386 -cdrom os.iso -vga vmware

@@ -25,6 +25,14 @@ extern unsigned char YELLOW;
 extern unsigned char DARK_GRAY;
 extern unsigned char GRAY;
 
+struct process *process_get(int index) {
+    if (index < 0 || index >= MAX_PROCESSES) {
+        return 0;
+    }
+
+    return &processes[index];
+}
+
 // chatgpt copied function cuz assembly
 static void enter_user_process(unsigned int entry_point, unsigned int user_stack) {
     __asm__ volatile (
@@ -72,6 +80,29 @@ void process_init(void) {
         processes[i].user_stack = 0;
         processes[i].esp = 0;
         processes[i].ebp = 0;
+        processes[i].context.edi = 0;
+        processes[i].context.esi = 0;
+        processes[i].context.ebp = 0;
+        processes[i].context.esp = 0;
+        processes[i].context.ebx = 0;
+        processes[i].context.edx = 0;
+        processes[i].context.ecx = 0;
+        processes[i].context.eax = 0;
+
+        processes[i].kernel_stack = 0;
+
+        processes[i].context.irq = 0;
+        processes[i].context.error = 0;
+
+        processes[i].context.eip = processes[i].entry_point;
+
+        processes[i].context.cs = 0x1B;
+
+        processes[i].context.eflags = 0x202;
+
+        processes[i].context.user_esp = processes[i].user_stack;
+
+        processes[i].context.user_ss = 0x23;
     }
 
     next_pid = 1;
@@ -79,8 +110,27 @@ void process_init(void) {
     print("process_init done\n", WHITE);
 }
 
+unsigned int process_get_page_directory(int pid) {
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        if (processes[i].pid == (unsigned int)pid) {
+            return processes[i].page_directory;
+        }
+    }
+
+    return 0;
+}
+
+
+
 int process_create(unsigned char *program, unsigned int size) {
     int slot = -1;
+
+    unsigned int *directory = create_page_directory();
+
+    if (directory == 0) {
+        print("ERROR: could not create page directory\n", WHITE);
+        return -1;
+    }
 
     for (int i = 0; i < MAX_PROCESSES; i++) {
         if (processes[i].state == PROCESS_UNUSED) {
@@ -109,23 +159,29 @@ int process_create(unsigned char *program, unsigned int size) {
         unsigned int virtual_address =
             0x00400000 + (i * 4096);
 
-        map_page(
+        map_page_in(
+            directory,
             virtual_address,
             code_page,
             'U'
         );
     }
 
-    unsigned int stack_page =
-        allocate_page();
+    unsigned int stack_page = allocate_page();
 
-    map_page(
+    map_page_in(
+        directory,
         0x00800000,
         stack_page,
         'U'
     );
 
-    reload_page_directory();
+    unsigned int kernel_stack_page = allocate_page();
+
+    processes[slot].kernel_stack = kernel_stack_page + 4096;
+    
+
+    load_page_directory(directory);
 
     unsigned char *destination =
         (unsigned char *)0x00400000;
@@ -134,6 +190,9 @@ int process_create(unsigned char *program, unsigned int size) {
         destination[i] = program[i];
     }
 
+    /* Return to kernel address space */
+    reload_page_directory();
+
     processes[slot].pid =
         next_pid++;
 
@@ -141,13 +200,36 @@ int process_create(unsigned char *program, unsigned int size) {
         PROCESS_READY;
 
     processes[slot].page_directory =
-        (unsigned int)page_directory;
+        (unsigned int)directory;
 
     processes[slot].entry_point =
         0x00400000;
 
     processes[slot].user_stack =
         0x00801000;
+
+    processes[slot].context.edi = 0;
+    processes[slot].context.esi = 0;
+    processes[slot].context.ebp = 0;
+    processes[slot].context.esp = 0;
+    processes[slot].context.ebx = 0;
+    processes[slot].context.edx = 0;
+    processes[slot].context.ecx = 0;
+    processes[slot].context.eax = 0;
+
+    processes[slot].context.irq = 0;
+    processes[slot].context.error = 0;
+
+    processes[slot].context.eip =
+        processes[slot].entry_point;
+
+    processes[slot].context.cs = 0x1B;
+
+    processes[slot].context.eflags = 0x202;
+
+    processes[slot].context.user_esp = processes[slot].user_stack;
+
+    processes[slot].context.user_ss = 0x23;
 
     processes[slot].esp =
         0x00801000;
@@ -204,12 +286,60 @@ void process_run(int pid) {
     process->state = PROCESS_DEAD;
 }
 
+int process_next_ready(int current_pid) {
+    int start = 0;
 
-void process_exit(void)
-{
+    if (current_pid >= 0) {
+        for (int i = 0; i < MAX_PROCESSES; i++) {
+            if (processes[i].pid == (unsigned int)current_pid) {
+                start = i + 1;
+                break;
+            }
+        }
+    }
+
+    for (int offset = 0; offset < MAX_PROCESSES; offset++) {
+
+        int index =
+            (start + offset) % MAX_PROCESSES;
+
+        if (processes[index].state == PROCESS_READY ||
+            processes[index].state == PROCESS_RUNNING) {
+
+            return processes[index].pid;
+        }
+    }
+
+    return -1;
+}
+
+void process_exit(void) {
     print("\nProcess exited.\n", WHITE);
 
     while (1) {
         __asm__ volatile ("hlt");
     }
+}
+
+void process_save_context(int pid, struct cpu_context *context) {
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+
+        if (processes[i].pid == (unsigned int)pid) {
+
+            processes[i].context = *context;
+
+            return;
+        }
+    }
+}
+
+struct cpu_context *process_get_context(int pid) {
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+
+        if (processes[i].pid == (unsigned int)pid) {
+            return &processes[i].context;
+        }
+    }
+
+    return 0;
 }

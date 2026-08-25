@@ -2,96 +2,125 @@
 #include "drivers/terminal.h"
 #include "memory/pmm.h"
 
-unsigned int page_directory[1024] __attribute__((aligned(4096)));
-unsigned int page_table[1024] __attribute__((aligned(4096)));
+unsigned int page_directory[1024]
+    __attribute__((aligned(4096)));
 
-void init_paging(void){
-    for(int i = 0; i < 1024; i++){
+unsigned int page_table[1024]
+    __attribute__((aligned(4096)));
+
+
+void init_paging(void)
+{
+    for (int i = 0; i < 1024; i++) {
         page_directory[i] = 0;
-        page_table[i] = (i * 4096) | 0x03; // | bitwise OR to set config to 0x03 and * 4096 because of the size
+
+        /* Identity-map first 4 MiB */
+        page_table[i] =
+            (i * 4096) | 0x03;
     }
-    page_directory[0] = (unsigned int)page_table | 0x03; // copy address to page directory and get the config right by bitwise or 0x03
+
+    page_directory[0] =
+        (unsigned int)page_table | 0x03;
+
     load_page_directory(page_directory);
 }
 
-void map_page(unsigned int virtual_address, unsigned int physical_address, unsigned char mode){
-	if(mode == 'K'){
-		unsigned int directory_index =
-			(virtual_address >> 22) & 0x3FF;
 
-		unsigned int table_index =
-			(virtual_address >> 12) & 0x3FF;
+void map_page_in(
+    unsigned int *directory,
+    unsigned int virtual_address,
+    unsigned int physical_address,
+    unsigned char mode
+)
+{
+    unsigned int directory_index =
+        (virtual_address >> 22) & 0x3FF;
 
-		unsigned int aligned_address =
-			physical_address & 0xFFFFF000;
+    unsigned int table_index =
+        (virtual_address >> 12) & 0x3FF;
 
-		unsigned int *table;
+    unsigned int aligned_address =
+        physical_address & 0xFFFFF000;
 
-		if((page_directory[directory_index] & 0x01) == 1){
+    unsigned int entry_flags;
 
-			table = (unsigned int *)
-				(page_directory[directory_index] & 0xFFFFF000);
+    if (mode == 'U') {
+        entry_flags = 0x07;
+    } else {
+        entry_flags = 0x03;
+    }
 
-		}else{
+    unsigned int *table;
 
-			unsigned int new_page_table_address =
-				allocate_page();
+    if (directory[directory_index] & 0x01) {
 
-			table = (unsigned int *)new_page_table_address;
+        table = (unsigned int *)
+            (directory[directory_index] & 0xFFFFF000);
 
-			for(int i = 0; i < 1024; i++){
+        if (mode == 'U') {
+            directory[directory_index] |= 0x04;
+        }
 
-				table[i] = 0;
+    } else {
 
-			}
+        unsigned int new_page_table =
+            allocate_page();
 
-			page_directory[directory_index] =
-				new_page_table_address | 0x03;
-	
-		}
+        table = (unsigned int *)new_page_table;
 
-		table[table_index] = aligned_address | 0x03;
-	}else if(mode == 'U'){
-		unsigned int directory_index =
-			(virtual_address >> 22) & 0x3FF;
+        for (int i = 0; i < 1024; i++) {
+            table[i] = 0;
+        }
 
-		unsigned int table_index =
-			(virtual_address >> 12) & 0x3FF;
+        directory[directory_index] =
+            new_page_table | entry_flags;
+    }
 
-		unsigned int aligned_address =
-			physical_address & 0xFFFFF000;
-
-		unsigned int *table;
-
-		if((page_directory[directory_index] & 0x04) == 0x04){
-
-			page_directory[directory_index] |= 0x04;
-
-			table = (unsigned int *)
-				(page_directory[directory_index] & 0xFFFFF000);
-
-		}else{
-
-			unsigned int new_page_table_address =
-				allocate_page();
-
-			table = (unsigned int *)new_page_table_address;
-
-			for(int i = 0; i < 1024; i++){
-
-				table[i] = 0;
-
-			}
-
-			page_directory[directory_index] =
-				new_page_table_address | 0x07;
-	
-		}
-
-		table[table_index] = aligned_address | 0x07;
-	}
+    table[table_index] =
+        aligned_address | entry_flags;
 }
 
-void reload_page_directory(void){
+
+void map_page(
+    unsigned int virtual_address,
+    unsigned int physical_address,
+    unsigned char mode
+)
+{
+    map_page_in(
+        page_directory,
+        virtual_address,
+        physical_address,
+        mode
+    );
+}
+
+
+unsigned int *create_page_directory(void)
+{
+    unsigned int physical_address =
+        allocate_page();
+
+    unsigned int *directory =
+        (unsigned int *)physical_address;
+
+    for (int i = 0; i < 1024; i++) {
+        directory[i] = 0;
+    }
+
+    for (int i = 0; i < 1024; i++) {
+
+        if (page_directory[i] & 0x01) {
+            directory[i] =
+                page_directory[i];
+        }
+    }
+
+    return directory;
+}
+
+
+void reload_page_directory(void)
+{
     load_page_directory(page_directory);
 }

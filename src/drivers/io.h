@@ -6,5 +6,6 @@ void outb(unsigned short port, unsigned char value);
 void picremap(void);
 unsigned char pic_get_irr(void);
 unsigned char pic_get_isr(void);
+void end_interrupt(unsigned int irq);
 
 #endif

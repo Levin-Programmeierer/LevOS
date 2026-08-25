@@ -2,6 +2,7 @@
 #include "../drivers/keyboard.h"
 #include "../cpu/timer.h"
 #include "../drivers/io.h"
+#include "process/cpu_context.h"
 
 extern void load_tss(void);
 
@@ -323,16 +324,20 @@ void exception_handler(unsigned int exception, unsigned int error_code) {
     }
 }
 
-void irq_handler(unsigned int irq) {
+struct cpu_context *irq_handler(struct cpu_context *context) {
+    unsigned int irq = context->irq;
+
     if (irq == 0) {
-        timer_handler();
+        context = timer_handler(context);
     }
     else if (irq == 1) {
         keyboard_irq();
     }
-    end_interrupt();
-}
 
+    end_interrupt(irq);
+
+    return context;
+}
 void cpu_halt(void){
 	__asm__ volatile ("hlt");
 }

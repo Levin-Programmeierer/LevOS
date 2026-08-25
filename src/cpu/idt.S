@@ -105,12 +105,23 @@ common_isr:
 
 .macro IRQ_STUB n
 .global irq\n
+
 irq\n:
-    pusha
+    pushl $0
     pushl $\n
+
+    pusha
+
+    pushl %esp
     call irq_handler
     addl $4, %esp
+
+    movl %eax, %esp
+
     popa
+
+    addl $8, %esp
+
     iret
 .endm
 
@@ -145,6 +156,25 @@ common_syscall:
     call syscall_handler
 
     addl $12, %esp
+
+    popa
+
+    addl $8, %esp
+
+    iret
+
+common_irq:
+    pusha
+
+    movl 32(%esp), %eax
+    movl %esp, %edx
+
+    pushl %edx
+    pushl %eax
+
+    call irq_handler
+
+    addl $8, %esp
 
     popa
 
