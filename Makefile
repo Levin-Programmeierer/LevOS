@@ -16,18 +16,31 @@ OBJS = \
 	build/paging.o \
 	build/paging_asm.o \
 	build/pmm.o \
-	build/user.o
+	build/user_binary.o \
+	build/process.o \
+	build/syscalls.o \
+	build/timer.o
 
 all: os.iso build/user.bin
 
 build/boot.o: src/boot/boot.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/user.o: src/user/user.S
+build/user_binary.o: build/user.bin
+	objcopy -I binary -O elf32-i386 -B i386 $< $@
+
+build/syscalls.o: src/cpu/syscalls.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/user.bin: build/user.o
-	objcopy -O binary -j .text $< $@
+build/process.o: src/process/process.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/timer.o: src/cpu/timer.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/user.bin: src/user/user.S
+	$(CC) $(CFLAGS) -c $< -o build/user.o
+	ld -m elf_i386 -Ttext 0x00400000 --oformat binary -o $@ build/user.o
 
 build/kernel.o: src/kernel.c
 	$(CC) $(CFLAGS) -c $< -o $@

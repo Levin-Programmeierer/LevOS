@@ -5,6 +5,7 @@
 .extern gdtr
 .extern exception_handler
 .extern irq_handler
+.extern syscall_handler
 
 load_idt:
     lidt idtr
@@ -34,6 +35,19 @@ reload_segments:
     mov %ax, %ss
 
     ret
+
+.global isr128
+
+isr128:
+    pusha
+
+    pushl %ebx
+    pushl %eax
+    call syscall_handler
+    addl $8, %esp
+
+    popa
+    iret
 
 .macro ISR_NOERR n
 .global isr\n
@@ -105,9 +119,14 @@ common_isr:
 .macro IRQ_STUB n
 .global irq\n
 irq\n:
-    pushl $0
+    pusha
+
     pushl $\n
-    jmp common_irq
+    call irq_handler
+    addl $4, %esp
+
+    popa
+    iret
 .endm
 
 IRQ_STUB 0
@@ -127,16 +146,33 @@ IRQ_STUB 13
 IRQ_STUB 14
 IRQ_STUB 15
 
-.global common_irq
+.extern syscall_handler
 
-common_irq:
+.global syscall128
+
+syscall128:
+    pushl $0
+    pushl $128
+    jmp common_syscall
+
+
+common_syscall:
     pusha
 
-    pushl 32(%esp)      # IRQ number
-    call irq_handler
-    addl $4, %esp
+    movl 28(%esp), %eax
+    movl 16(%esp), %ebx
+    movl 24(%esp), %ecx
+
+    pushl %ecx
+    pushl %ebx
+    pushl %eax
+
+    call syscall_handler
+
+    addl $12, %esp
 
     popa
 
-    addl $8, %esp      # remove IRQ number + fake error code
+    addl $8, %esp
+
     iret

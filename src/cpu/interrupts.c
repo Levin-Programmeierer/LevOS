@@ -1,5 +1,7 @@
 #include "../drivers/terminal.h"
 #include "../drivers/keyboard.h"
+#include "../cpu/timer.h"
+
 extern void load_tss(void);
 
 extern void load_idt(void); // load idt import from asm idt.S
@@ -38,7 +40,7 @@ extern void isr29(void);
 extern void isr30(void);
 extern void isr31(void);
 
-extern void irq0(void);
+extern void irq0(void); // irqs
 extern void irq1(void);
 extern void irq2(void);
 extern void irq3(void);
@@ -166,6 +168,7 @@ static void set_idt_gate(int vector, unsigned int address) {
 }
 
 void initialise_IDT(void){
+    extern void syscall128(void);
     idtr.limit = sizeof(idt) - 1;
     idtr.base = (unsigned int) &idt[0];
     // all idt codes and so
@@ -217,6 +220,8 @@ void initialise_IDT(void){
     set_idt_gate(45, (unsigned int)irq13);
     set_idt_gate(46, (unsigned int)irq14);
     set_idt_gate(47, (unsigned int)irq15);
+    set_idt_gate(128, (unsigned int)syscall128);
+    idt[128].type_attributes = 0xEE;
 
 }
 
@@ -264,12 +269,14 @@ void initialise_GDT(void) {
 
     gdt[3].access = 0xFA; // 0xFA = user code
     gdt[3].limit_low = 0xFFFF;
+    gdt[3].granularity = 0xCF;
     gdt[3].base_low = 0;
     gdt[3].base_middle = 0;
     gdt[3].base_high = 0;
 
     gdt[4].access = 0xF2; // 0xF2 = user data
     gdt[4].limit_low = 0xFFFF;
+    gdt[4].granularity = 0xCF;
     gdt[4].base_low = 0;
     gdt[4].base_middle = 0;
     gdt[4].base_high = 0;
@@ -279,7 +286,7 @@ void initialise_GDT(void) {
 
     gdt[5].limit_low = tss_limit & 0xFFFF;
     gdt[5].base_low = tss_base & 0xFFFF;
-    gdt[5].base_middle = (tss_base >> 16) & 0x0F;
+    gdt[5].base_middle = (tss_base >> 16) & 0xFF;
     gdt[5].access = 0x89;
     gdt[5].granularity = (tss_limit >> 16) & 0x0F;
     gdt[5].base_high = (tss_base >> 24) & 0xFF;
@@ -288,8 +295,7 @@ void initialise_GDT(void) {
     load_tss();
 }
 
-void exception_handler(unsigned int exception, unsigned int error_code)
-{
+void exception_handler(unsigned int exception, unsigned int error_code) {
     print("EXCEPTION: ");
     print(exception_names[exception]);
     print("\n");
@@ -303,7 +309,12 @@ void exception_handler(unsigned int exception, unsigned int error_code)
     }
 }
 
-void irq_handler(unsigned int irq){
+void irq_handler(unsigned int irq) {
+    if (irq == 0) {
+        putchar('T');
+        timer_handler();
+    }
+
     if (irq == 1) {
         keyboard_irq();
     }

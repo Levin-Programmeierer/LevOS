@@ -4,49 +4,111 @@
 #include "shell/shell.h"
 #include "memory/paging.h"
 #include "memory/pmm.h"
-extern unsigned int page_directory[1024];
-extern unsigned int page_table[1024];
+#include "process/process.h"
+
+extern unsigned char _binary_build_user_bin_start[];
+extern unsigned char _binary_build_user_bin_end[];
+
 extern void load_idt(void);
 extern void enable_paging(void);
 
 void kernel_main(void) {
-	print("Initialising GDT...\n");
-	initialise_GDT();
-	print("Initialising IDT...\n");
-	initialise_IDT();
-	picremap();
-	load_idt();
-	init_keyboard();
-	init_paging();
-	enable_paging();
+    print("Initialising GDT...\n");
+    initialise_GDT();
 
-	unsigned int page1 = allocate_page();
-	unsigned int user_code = allocate_page();
-	unsigned int user_data = allocate_page();
+    print("Initialising IDT...\n");
+    initialise_IDT();
 
-	map_page(0x00200000, page1, 'K');
-	map_page(0x00400000, user_code, 'U');
-	map_page(0x00800000, user_data, 'U');
+    print("Remapping PIC...\n");
+    picremap();
 
-	reload_page_directory();
+    load_idt();
 
-	volatile unsigned int *test =
-		(volatile unsigned int *)0x00400000;
+    print("PIC MASK: ");
+    print_hex_byte(inb(0x21));
+    print("\n");
 
-	volatile unsigned int *physical =
-		(volatile unsigned int *)page1;
+    print("Initialising keyboard...\n");
+    init_keyboard();
 
-	*test = 0x12345678;
+    print("Initialising PIT...\n");
+    timer_init(100);
 
-	print("\nVirtual: ");
-	print_hex_dword(*test);
+    __asm__ volatile ("sti");
 
-	print("\nPhysical: ");
-	print_hex_dword(*physical);
+    unsigned int flags;
 
-	print("LevShell 0.1\n\n");
-	print("> ");
+    __asm__ volatile (
+        "pushf\n"
+        "pop %0"
+        : "=r"(flags)
+    );
 
-	__asm__ volatile ("sti");
-	shell();
+    print("EFLAGS: ");
+    print_hex_dword(flags);
+    print("\n");
+
+    print("Waiting for IRQ0...\n");
+
+    while (1) {
+        unsigned char irr;
+        unsigned char isr;
+        unsigned char imr;
+
+        outb(0x20, 0x0A);
+        irr = inb(0x20);
+
+        outb(0x20, 0x0B);
+        isr = inb(0x20);
+
+        imr = inb(0x21);
+
+        if (irr & 0x01) {
+            print("IRR0 ");
+            print_hex_byte(irr);
+
+            print(" ISR ");
+            print_hex_byte(isr);
+
+            print(" IMR ");
+            print_hex_byte(imr);
+
+            print("\n");
+        }
+
+        __asm__ volatile ("hlt");
+    }
+}
+
+
+//copied from chatgpt
+void enter_user_mode(void)
+{
+    __asm__ volatile (
+        "mov $0x23, %%ax\n"
+        "mov %%ax, %%ds\n"
+        "mov %%ax, %%es\n"
+        "mov %%ax, %%fs\n"
+        "mov %%ax, %%gs\n"
+
+        "push $0x23\n"
+        "push $0x00801000\n"
+
+        "pushf\n"
+        "pop %%eax\n"
+        "or $0x200, %%eax\n"
+        "push %%eax\n"
+
+        "push $0x1B\n"
+        "push $0x00400000\n"
+
+        "iret\n"
+        :
+        :
+        : "eax"
+    );
+}
+
+void enable_interrupts(void) {
+    __asm__ volatile ("sti");
 }

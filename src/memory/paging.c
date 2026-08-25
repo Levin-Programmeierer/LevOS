@@ -65,6 +65,8 @@ void map_page(unsigned int virtual_address, unsigned int physical_address, unsig
 
 		if((page_directory[directory_index] & 0x04) == 0x04){
 
+			page_directory[directory_index] |= 0x04;
+
 			table = (unsigned int *)
 				(page_directory[directory_index] & 0xFFFFF000);
 
