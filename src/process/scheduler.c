@@ -8,6 +8,10 @@ unsigned int scheduler_scratch_phys = 0;
 unsigned int scheduler_scratch_vaddr = 0x00300000; /* 3 MiB: inside low 4 MiB identity map */
 unsigned int scheduler_next_directory = 0;
 
+/* Runtime-debug toggle: printing inside IRQ handlers is dangerous (can
+   re-enter emulator I/O locks). Keep disabled by default. */
+int scheduler_diag_enabled = 0;
+
 static int current_index = -1;
 
 extern unsigned char LIGHT_BLUE;
@@ -126,15 +130,19 @@ struct cpu_context *scheduler_tick(
 
         struct cpu_context *scratch = (struct cpu_context *)scheduler_scratch_vaddr;
 
-        /* Diagnostics: print addresses and a few dwords from the context */
-        print("Diag: scratch_vaddr: ", YELLOW); print_hex_dword(scheduler_scratch_vaddr); putchar('\n');
-        print("Diag: scratch_phys: ", YELLOW); print_hex_dword(scheduler_scratch_phys); putchar('\n');
-        print("Diag: next_context ptr: ", YELLOW); print_hex_dword((unsigned int)next_context); putchar('\n');
+        /* Diagnostics are expensive inside interrupts and can re-enter host I/O
+           causing emulator assertions. Only enable when debugging interactively. */
+        extern int scheduler_diag_enabled;
+        if (scheduler_diag_enabled) {
+            print("Diag: scratch_vaddr: ", YELLOW); print_hex_dword(scheduler_scratch_vaddr); putchar('\n');
+            print("Diag: scratch_phys: ", YELLOW); print_hex_dword(scheduler_scratch_phys); putchar('\n');
+            print("Diag: next_context ptr: ", YELLOW); print_hex_dword((unsigned int)next_context); putchar('\n');
 
-        print("Diag: next_context first dwords:\n", YELLOW);
-        unsigned int *nc = (unsigned int *)next_context;
-        for (int i=0;i<8;i++) { print_hex_dword(nc[i]); putchar(' '); }
-        putchar('\n');
+            print("Diag: next_context first dwords:\n", YELLOW);
+            unsigned int *nc = (unsigned int *)next_context;
+            for (int i=0;i<8;i++) { print_hex_dword(nc[i]); putchar(' '); }
+            putchar('\n');
+        }
 
         /* copy into scratch while current page directory (kernel) is active */
         unsigned int sz = sizeof(struct cpu_context);
@@ -142,22 +150,25 @@ struct cpu_context *scheduler_tick(
         unsigned char *dst = (unsigned char *)scratch;
         for (unsigned int i = 0; i < sz; i++) dst[i] = src[i];
 
-        /* Diagnostics: show scratch contents after copy */
-        print("Diag: scratch first dwords after copy:\n", YELLOW);
-        unsigned int *sc = (unsigned int *)scratch;
-        for (int i=0;i<12;i++) { print_hex_dword(sc[i]); putchar(' '); }
-        putchar('\n');
+        /* Diagnostics: avoid printing here unless enabled */
+        extern int scheduler_diag_enabled;
+        if (scheduler_diag_enabled) {
+            print("Diag: scratch first dwords after copy:\n", YELLOW);
+            unsigned int *sc = (unsigned int *)scratch;
+            for (int i=0;i<12;i++) { print_hex_dword(sc[i]); putchar(' '); }
+            putchar('\n');
+
+            print("Diag: next page directory addr: ", YELLOW); print_hex_dword(directory); putchar('\n');
+
+            print("Switching to PID ", LIGHT_GREEN);
+            print_hex_dword((unsigned int)next_pid);
+            putchar('\n');
+        }
 
         /* Make next page directory visible to the IRQ assembly so it can load CR3.
            We do NOT load CR3 here — the assembly stub will do it right after it sets ESP. */
         extern unsigned int scheduler_next_directory;
         scheduler_next_directory = directory;
-
-        print("Diag: next page directory addr: ", YELLOW); print_hex_dword(directory); putchar('\n');
-
-        print("Switching to PID ", LIGHT_GREEN);
-        print_hex_dword((unsigned int)next_pid);
-        putchar('\n');
 
         /* Return the scratch pointer (still valid because every process' page directory
            maps the same scratch physical page at the same virtual address). */
