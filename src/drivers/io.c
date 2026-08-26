@@ -28,6 +28,26 @@ void outb(unsigned short port, unsigned char value){
     );
 }
 
+unsigned int inl(unsigned short port) {
+    unsigned int value;
+
+    __asm__ volatile (
+        "inl %1, %0"
+        : "=a"(value)
+        : "Nd"(port)
+    );
+
+    return value;
+}
+
+void outl(unsigned short port, unsigned int value) {
+    __asm__ volatile (
+        "outl %1, %0"
+        :
+        : "Nd"(port), "a"(value)
+    );
+}
+
 void picremap(void) {
     // goal: remap pic to 32-47 so in hex 0x20 to 0x2F 
     outb(PIC1_COMMAND, 0x11); // initialisation sequence

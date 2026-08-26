@@ -1,15 +1,15 @@
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "cpu/interrupts.h"
-#include "shell/graphicsshell.h"
+#include "shell/shell.h"
 #include "memory/paging.h"
 #include "memory/pmm.h"
 #include "process/process.h"
 #include "drivers/io.h"
 #include "cpu/timer.h"
 #include "process/scheduler.h"
-#include "drivers/framebuffer_driver.h"
 #include <stdint.h>
+#include "drivers/pci.h"
 
 
 extern unsigned char _binary_build_user_bin_start[];
@@ -126,17 +126,18 @@ void kernel_main(void) {
 }
 Testing kernel*/
 
-void kernel_main(uint32_t mbi_addr){
-    framebuffer_init(mbi_addr);
-    font_init();
+void kernel_main(){
+    //framebuffer_init(mbi_addr);
+    //font_init();
+    terminal_init();
     initialise_GDT();
     initialise_IDT();
     picremap();
     load_idt();
+    pciReadAllVendors();
     init_keyboard();
     enable_interrupts();
-
-    graphicsshell();
+    shell();
 }
 
 //copied from chatgpt

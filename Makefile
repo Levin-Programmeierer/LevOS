@@ -20,10 +20,10 @@ OBJS = \
 	build/timer.o \
 	build/scheduler.o \
 	build/user_binary.o \
-	build/framebuffer_driver.o \
 	build/font.o \
 	build/font_driver.o \
-	build/graphicsshell.o
+	build/shell.o \
+	build/pci.o
 
 all: os.iso build/user.bin
 
@@ -37,6 +37,9 @@ build/syscalls.o: src/cpu/syscalls.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/process.o: src/process/process.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/pci.o: src/drivers/pci.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/framebuffer_driver.o: src/drivers/framebuffer_driver.c
@@ -104,4 +107,4 @@ clean:
 	rm -f build/*.o build/kernel.bin os.iso
 
 run: os.iso
-	qemu-system-i386 -cdrom os.iso -vga vmware
+	qemu-system-i386 -cdrom os.iso
