@@ -1,9 +1,14 @@
 #include "drivers/keyboard.h"
 #include "drivers/terminal.h"
 #include "cpu/interrupts.h"
+
 #define COMMAND_BUFFER_SIZE 128
 #define COMMAND_SIZE 32
 #define PARAMETER_SIZE 96
+
+void process_command(void);
+void split_command(const char *input, char *command, char *parameters);
+int strcmp(const char *a, const char *b);
 
 char command_buffer[COMMAND_BUFFER_SIZE];
 char command[COMMAND_SIZE];
@@ -110,7 +115,7 @@ int strcmp(const char *a, const char *b){
         i++;
     }
 
-    return a[i] != b[i];
+    return (a[i] != b[i]);
 }
 
 void split_command(const char *input, char *command, char *parameters)
@@ -119,7 +124,7 @@ void split_command(const char *input, char *command, char *parameters)
     int parameter_index = 0;
     int command_done = 0;
 
-    for (int i = 0; i < command_length; i++) {
+    for (unsigned int i = 0; i < command_length; i++) {
 
         if (input[i] != ' ' && command_done == 0) {
 

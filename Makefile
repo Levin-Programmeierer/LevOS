@@ -23,7 +23,8 @@ OBJS = \
 	build/font.o \
 	build/font_driver.o \
 	build/shell.o \
-	build/pci.o
+	build/pci.o \
+	build/qemu_vga.o
 
 all: os.iso build/user.bin
 
@@ -40,6 +41,9 @@ build/process.o: src/process/process.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/pci.o: src/drivers/pci.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/qemu_vga.o: src/drivers/qemu_vga.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/framebuffer_driver.o: src/drivers/framebuffer_driver.c
@@ -107,4 +111,4 @@ clean:
 	rm -f build/*.o build/kernel.bin os.iso
 
 run: os.iso
-	qemu-system-i386 -cdrom os.iso
+	qemu-system-i386 -cdrom os.iso -vga std

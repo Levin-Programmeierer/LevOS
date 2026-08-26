@@ -94,10 +94,12 @@ common_isr:
     movl 32(%esp), %eax     # exception number
     movl 36(%esp), %edx     # error code
 
+    # push pointer to the saved register frame, then error and vector
+    pushl %esp
     pushl %edx
     pushl %eax
-    call exception_handler
-    addl $8, %esp
+    call exception_handler_with_context
+    addl $12, %esp
 
     popa
     addl $8, %esp
@@ -118,12 +120,18 @@ irq\n:
 
     movl %eax, %esp
 
+    # load next page directory into CR3 so the CPU uses the new page tables
+    movl scheduler_next_directory, %ecx
+    mov %ecx, %cr3
+
     popa
 
     addl $8, %esp
 
     iret
 .endm
+
+.extern scheduler_next_directory
 
 IRQ_STUB 0
 IRQ_STUB 1

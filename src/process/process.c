@@ -100,10 +100,8 @@ void process_init(void) {
 
         processes[i].context.eflags = 0x202;
 
-        processes[i].context.user_esp = processes[i].user_stack;
-
         processes[i].context.user_ss = 0x23;
-    }
+        processes[i].context.user_esp = processes[i].user_stack;    }
 
     next_pid = 1;
 
@@ -130,6 +128,14 @@ int process_create(unsigned char *program, unsigned int size) {
     if (directory == 0) {
         print("ERROR: could not create page directory\n", WHITE);
         return -1;
+    }
+
+    /* Ensure the scheduler scratch page is mapped into this new directory so the
+       kernel can copy the context there safely before switching CR3. */
+    extern unsigned int scheduler_scratch_phys;
+    extern unsigned int scheduler_scratch_vaddr;
+    if (scheduler_scratch_phys != 0) {
+        map_page_in(directory, scheduler_scratch_vaddr, scheduler_scratch_phys, 'K');
     }
 
     for (int i = 0; i < MAX_PROCESSES; i++) {
@@ -179,7 +185,44 @@ int process_create(unsigned char *program, unsigned int size) {
     unsigned int kernel_stack_page = allocate_page();
 
     processes[slot].kernel_stack = kernel_stack_page + 4096;
-    
+
+    /* Map the kernel stack page into the new page directory at the same
+       virtual address so it remains accessible after switching CR3. */
+    map_page_in(
+        directory,
+        kernel_stack_page,
+        kernel_stack_page,
+        'K'
+    );
+
+    /* Build an initial kernel stack frame for this process in the kernel stack page.
+       Place the struct cpu_context at the top of the stack so the IRQ stub can
+       movl %eax, %esp to that address and then popa/iret will restore registers and
+       return to user EIP. */
+    struct cpu_context *frame = (struct cpu_context *)(kernel_stack_page + 4096 - sizeof(struct cpu_context));
+
+    frame->edi = 0;
+    frame->esi = 0;
+    frame->ebp = processes[slot].kernel_stack;
+    frame->esp = processes[slot].kernel_stack;
+    frame->ebx = 0;
+    frame->edx = 0;
+    frame->ecx = 0;
+    frame->eax = 0;
+
+    frame->irq = 0;
+    frame->error = 0;
+
+    frame->eip = 0x00400000; /* entry point */
+    frame->cs = 0x1B;
+    frame->eflags = 0x202;
+    frame->user_ss = 0x23;
+    frame->user_esp = 0x00801000;
+
+    processes[slot].kernel_frame = frame;
+
+    /* initialize the saved kernel context fields for bookkeeping too */
+    processes[slot].context = *frame;
 
     load_page_directory(directory);
 
@@ -227,9 +270,9 @@ int process_create(unsigned char *program, unsigned int size) {
 
     processes[slot].context.eflags = 0x202;
 
-    processes[slot].context.user_esp = processes[slot].user_stack;
-
     processes[slot].context.user_ss = 0x23;
+
+    processes[slot].context.user_esp = processes[slot].user_stack;
 
     processes[slot].esp =
         0x00801000;
@@ -337,6 +380,8 @@ struct cpu_context *process_get_context(int pid) {
     for (int i = 0; i < MAX_PROCESSES; i++) {
 
         if (processes[i].pid == (unsigned int)pid) {
+            if (processes[i].kernel_frame)
+                return processes[i].kernel_frame;
             return &processes[i].context;
         }
     }

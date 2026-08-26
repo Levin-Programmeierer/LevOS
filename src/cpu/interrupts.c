@@ -310,15 +310,45 @@ void initialise_GDT(void) {
     load_tss();
 }
 
-void exception_handler(unsigned int exception, unsigned int error_code) {
+#include <stdint.h>
+
+void exception_handler_with_context(struct cpu_context *ctx, unsigned int exception, unsigned int error_code) {
+    unsigned int cr3 = 0;
+    __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
+
     print("EXCEPTION: ", RED);
-    print(exception_names[exception], WHITE);
+    if (exception < 32) {
+        print(exception_names[exception], WHITE);
+    } else {
+        print("(unknown)", WHITE);
+    }
     print("\n", WHITE);
 
     print("ERROR CODE: ", RED);
     print_hex_dword(error_code);
     print("\n", WHITE);
 
+    print("CR3: ", RED);
+    print_hex_dword(cr3);
+    print("\n", WHITE);
+
+    if (ctx) {
+        print("Saved context:\n", YELLOW);
+        print(" EIP: ", WHITE); print_hex_dword(ctx->eip); putchar('\n');
+        print(" CS:  ", WHITE); print_hex_dword(ctx->cs); putchar('\n');
+        print(" EFLAGS:", WHITE); print_hex_dword(ctx->eflags); putchar('\n');
+        print(" ESP: ", WHITE); print_hex_dword(ctx->esp); putchar('\n');
+        print(" USER_SS:", WHITE); print_hex_dword(ctx->user_ss); putchar('\n');
+        print(" USER_ESP:", WHITE); print_hex_dword(ctx->user_esp); putchar('\n');
+        print(" EAX: ", WHITE); print_hex_dword(ctx->eax); putchar('\n');
+        print(" EBX: ", WHITE); print_hex_dword(ctx->ebx); putchar('\n');
+        print(" ECX: ", WHITE); print_hex_dword(ctx->ecx); putchar('\n');
+        print(" EDX: ", WHITE); print_hex_dword(ctx->edx); putchar('\n');
+        print(" ESI: ", WHITE); print_hex_dword(ctx->esi); putchar('\n');
+        print(" EDI: ", WHITE); print_hex_dword(ctx->edi); putchar('\n');
+    }
+
+    print("\nHalting.\n", RED);
     while (1) {
         asm volatile ("hlt");
     }

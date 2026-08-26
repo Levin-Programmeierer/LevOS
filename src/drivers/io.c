@@ -62,7 +62,7 @@ void picremap(void) {
     outb(PIC1_DATA, 0x01);
     outb(PIC2_DATA, 0x01); // tell these bros to run at 8086 mode
 
-    outb(PIC1_DATA, 0xFD); // tell these gangsters to take those masks off
+    outb(PIC1_DATA, 0xFC); // tell these gangsters to take those masks off
     outb(PIC2_DATA, 0xFF);
 }
 

@@ -26,6 +26,7 @@ struct process {
     unsigned int kernel_stack;
 
     struct cpu_context context;
+    struct cpu_context *kernel_frame;
 };
 
 void process_init(void);
@@ -50,5 +51,6 @@ struct cpu_context *process_get_context(
 
 unsigned int process_get_page_directory(int pid);
 int process_next_ready(int current_pid);
+struct process *process_get(int index);
 
 #endif

@@ -3,6 +3,7 @@
 #include "drivers/terminal.h"
 #include "cpu/interrupts.h"
 #include "process/process.h"
+#include "process/scheduler.h"
 
 static unsigned int ticks = 0;
 
