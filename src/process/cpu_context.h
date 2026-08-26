@@ -11,14 +11,14 @@ struct cpu_context {
     unsigned int ecx;
     unsigned int eax;
 
+    unsigned int irq;
+    unsigned int error;
+
     unsigned int eip;
     unsigned int cs;
     unsigned int eflags;
+    unsigned int user_ss; /* SS for user stack */
     unsigned int user_esp; /* ESP for user stack */
-    unsigned int user_ss;  /* SS for user stack */
-
-    unsigned int irq;
-    unsigned int error;
 };
 
 #endif
