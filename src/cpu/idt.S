@@ -120,13 +120,13 @@ irq\n:
 
     movl %eax, %esp
 
-    # load next page directory into CR3 so the CPU uses the new page tables
-    movl scheduler_next_directory, %ecx
-    mov %ecx, %cr3
-
     popa
 
     addl $8, %esp
+
+    # load next page directory into CR3 so the CPU uses the new page tables
+    movl scheduler_next_directory, %ecx
+    mov %ecx, %cr3
 
     iret
 .endm
