@@ -1,6 +1,8 @@
 CC = gcc
+NASM = nasm
 
 CFLAGS = -m32 -ffreestanding -fno-pie -fno-stack-protector -Wall -Wextra -Isrc
+NASMFLAGS = -f elf32 -Isrc
 
 LDFLAGS = -m elf_i386 -T linker.ld
 
@@ -12,99 +14,62 @@ OBJS = \
 	build/io.o \
 	build/idt.o \
 	build/interrupts.o \
-	build/paging.o \
-	build/paging_asm.o \
-	build/pmm.o \
-	build/process.o \
-	build/syscalls.o \
-	build/timer.o \
-	build/scheduler.o \
-	build/user_binary.o \
-	build/font.o \
-	build/font_driver.o \
 	build/shell.o \
-	build/pci.o \
-	build/qemu_vga.o \
+	build/gdt.o \
+	build/gdt_asm.o
 
-all: os.iso build/user.bin
+all: os.iso
 
-build/boot.o: src/boot/boot.S
-	$(CC) $(CFLAGS) -c $< -o $@
+# NASM assembly
+build/boot.o: src/boot/boot.asm
+	mkdir -p build
+	$(NASM) $(NASMFLAGS) $< -o $@
 
-build/user_binary.o: build/user.bin
-	objcopy -I binary -O elf32-i386 -B i386 $< $@
+build/idt.o: src/cpu/idt.asm
+	mkdir -p build
+	$(NASM) $(NASMFLAGS) $< -o $@
 
-build/syscalls.o: src/cpu/syscalls.c
-	$(CC) $(CFLAGS) -c $< -o $@
+build/gdt_asm.o: src/memory/gdt.asm
+	mkdir -p build
+	$(NASM) $(NASMFLAGS) $< -o $@
 
-build/process.o: src/process/process.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/pci.o: src/drivers/pci.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/qemu_vga.o: src/drivers/qemu_vga.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/framebuffer_driver.o: src/drivers/framebuffer_driver.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/timer.o: src/cpu/timer.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/user.bin: src/user/user.S
-	$(CC) $(CFLAGS) -c $< -o build/user.o
-	ld -m elf_i386 -Ttext 0x00400000 --oformat binary -o $@ build/user.o
-
-build/scheduler.o: src/process/scheduler.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
+# C files
 build/kernel.o: src/kernel.c
+	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/keyboard.o: src/drivers/keyboard.c
+	mkdir -p build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/gdt.o: src/memory/gdt.c
+	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/terminal.o: src/drivers/terminal.c
+	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/io.o: src/drivers/io.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/idt.o: src/cpu/idt.S
+	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/interrupts.o: src/cpu/interrupts.c
+	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/shell.o: src/shell/shell.c
+	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/paging.o: src/memory/paging.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/paging_asm.o: src/memory/paging.S
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/pmm.o: src/memory/pmm.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
+# Link kernel
 build/kernel.bin: $(OBJS)
 	ld $(LDFLAGS) -o $@ $(OBJS)
 
-build/font.o: fonts/cp865-8x16.psf
-	objcopy -I binary -O elf32-i386 -B i386 $< $@
-
-build/font_driver.o: src/drivers/font.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/graphicsshell.o: src/shell/graphicsshell.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
+# ISO
 os.iso: build/kernel.bin
 	mkdir -p iso/boot/grub
 	cp build/kernel.bin iso/boot/kernel.bin
-	cp grub.cfg iso/boot/grub/grub.cfg
 	grub-mkrescue -o $@ iso
 
 clean:

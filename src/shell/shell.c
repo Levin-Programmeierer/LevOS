@@ -38,7 +38,7 @@ void shell(void){
         char c = keyboard_getchar();
 
         if (c == 0) {
-            cpu_halt();
+            __asm__ volatile ("hlt");
             continue;
         }
 
