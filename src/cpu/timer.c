@@ -19,9 +19,10 @@ void timer_init(unsigned int frequency) {
     outb(0x40, divisor & 0xFF);
     outb(0x40, (divisor >> 8) & 0xFF);
 }
-struct cpu_context *timer_handler(struct cpu_context *context){
-    ticks++;
-
+struct cpu_context *timer_handler(
+    struct cpu_context *context
+)
+{
     return scheduler_tick(context);
 }
 

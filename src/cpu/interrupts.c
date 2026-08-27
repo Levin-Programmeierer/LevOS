@@ -354,17 +354,32 @@ void exception_handler_with_context(struct cpu_context *ctx, unsigned int except
     }
 }
 
-struct cpu_context *irq_handler(struct cpu_context *context) {
-    unsigned int irq = context->irq;
-
-    if (irq == 0) {
-        context = timer_handler(context);
+struct cpu_context *irq_handler(
+    struct cpu_context *context
+)
+{
+    if (context == 0) {
+        return 0;
     }
-    else if (irq == 1) {
+
+    if (context->irq == 0) {
+
+        /*
+         * Just acknowledge timer IRQ.
+         * NO scheduler yet.
+         */
+        end_interrupt(0);
+    }
+    else if (context->irq == 1) {
+
         keyboard_irq();
-    }
 
-    end_interrupt(irq);
+        end_interrupt(1);
+    }
+    else {
+
+        end_interrupt(context->irq);
+    }
 
     return context;
 }

@@ -24,7 +24,7 @@ OBJS = \
 	build/font_driver.o \
 	build/shell.o \
 	build/pci.o \
-	build/qemu_vga.o
+	build/qemu_vga.o \
 
 all: os.iso build/user.bin
 

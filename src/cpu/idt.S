@@ -1,33 +1,37 @@
 .global load_idt
 .global load_gdt
 .global load_tss
+
 .extern idtr
 .extern gdtr
-.extern exception_handler
-.extern irq_handler
-.extern syscall_handler
+
 
 load_idt:
     lidt idtr
     ret
 
+
 load_gdt:
     cli
+
     lgdt gdtr
 
-    # Reload CS using the new GDT
     pushl $0x08
     pushl $reload_segments
+
     lret
 
+
 load_tss:
-	mov $0x28, %ax
-	ltr %ax
-	ret
+    mov $0x28, %ax
+    ltr %ax
+    ret
+
 
 reload_segments:
-    # Reload data segment registers
+
     mov $0x10, %ax
+
     mov %ax, %ds
     mov %ax, %es
     mov %ax, %fs
@@ -36,14 +40,27 @@ reload_segments:
 
     ret
 
+
+
+/*
+ * ============================================================
+ * EXCEPTIONS
+ * ============================================================
+ */
+
 .macro ISR_NOERR n
+
 .global isr\n
 
 isr\n:
+
     pushl $0
     pushl $\n
+
     jmp common_isr
+
 .endm
+
 
 ISR_NOERR 0
 ISR_NOERR 1
@@ -71,13 +88,19 @@ ISR_NOERR 29
 ISR_NOERR 30
 ISR_NOERR 31
 
+
 .macro ISR_ERR n
+
 .global isr\n
 
 isr\n:
+
     pushl $\n
+
     jmp common_isr
+
 .endm
+
 
 ISR_ERR 8
 ISR_ERR 10
@@ -88,27 +111,41 @@ ISR_ERR 14
 ISR_ERR 17
 
 
+
 common_isr:
+
     pusha
 
-    movl 32(%esp), %eax     # exception number
-    movl 36(%esp), %edx     # error code
+    movl 32(%esp), %eax
+    movl 36(%esp), %edx
 
-    # push pointer to the saved register frame, then error and vector
     pushl %esp
     pushl %edx
     pushl %eax
+
     call exception_handler_with_context
+
     addl $12, %esp
 
     popa
+
     addl $8, %esp
+
     iret
+
+
+
+/*
+ * ============================================================
+ * IRQs
+ * ============================================================
+ */
 
 .macro IRQ_STUB n
 .global irq\n
 
 irq\n:
+
     pushl $0
     pushl $\n
 
@@ -118,20 +155,13 @@ irq\n:
     call irq_handler
     addl $4, %esp
 
-    movl %eax, %esp
-
     popa
 
     addl $8, %esp
 
-    # load next page directory into CR3 so the CPU uses the new page tables
-    movl scheduler_next_directory, %ecx
-    mov %ecx, %cr3
-
     iret
 .endm
 
-.extern scheduler_next_directory
 
 IRQ_STUB 0
 IRQ_STUB 1
@@ -149,43 +179,3 @@ IRQ_STUB 12
 IRQ_STUB 13
 IRQ_STUB 14
 IRQ_STUB 15
-
-common_syscall:
-    pusha
-
-    movl 28(%esp), %eax
-    movl 16(%esp), %ebx
-    movl 24(%esp), %ecx
-
-    pushl %ecx
-    pushl %ebx
-    pushl %eax
-
-    call syscall_handler
-
-    addl $12, %esp
-
-    popa
-
-    addl $8, %esp
-
-    iret
-
-common_irq:
-    pusha
-
-    movl 32(%esp), %eax
-    movl %esp, %edx
-
-    pushl %edx
-    pushl %eax
-
-    call irq_handler
-
-    addl $8, %esp
-
-    popa
-
-    addl $8, %esp
-
-    iret

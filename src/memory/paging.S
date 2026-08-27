@@ -1,5 +1,6 @@
 .global load_page_directory
 .global enable_paging
+.extern page_directory
 
 load_page_directory:
     mov 4(%esp), %eax

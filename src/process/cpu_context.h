@@ -1,24 +1,28 @@
 #ifndef CPU_CONTEXT_H
 #define CPU_CONTEXT_H
+#include <stdint.h>
 
 struct cpu_context {
-    unsigned int edi;
-    unsigned int esi;
-    unsigned int ebp;
-    unsigned int esp;
-    unsigned int ebx;
-    unsigned int edx;
-    unsigned int ecx;
-    unsigned int eax;
 
-    unsigned int irq;
-    unsigned int error;
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebp;
+    uint32_t esp;
 
-    unsigned int eip;
-    unsigned int cs;
-    unsigned int eflags;
-    unsigned int user_ss; /* SS for user stack */
-    unsigned int user_esp; /* ESP for user stack */
+    uint32_t ebx;
+    uint32_t edx;
+    uint32_t ecx;
+    uint32_t eax;
+
+    uint32_t irq;
+    uint32_t error;
+
+    uint32_t eip;
+    uint32_t cs;
+    uint32_t eflags;
+
+    uint32_t user_esp;
+    uint32_t user_ss;
 };
 
 #endif

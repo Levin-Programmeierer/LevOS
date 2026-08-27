@@ -12,7 +12,6 @@
 #include "drivers/pci.h"
 #include "drivers/qemu_vga.h"
 
-
 extern unsigned char _binary_build_user_bin_start[];
 extern unsigned char _binary_build_user_bin_end[];
 
@@ -47,10 +46,21 @@ void kernel_main(){
     init_paging();
     enable_paging();
 
+    volatile uint32_t *p = (uint32_t *)0x0007FEE0;
+
+    uint32_t old = *p;
+    *p = 0x12345678;
+
+    print("stack test: ", WHITE);
+    print_hex_dword(*p);
+    putchar('\n');
+
+    *p = old;
+
     process_init();
     scheduler_init();
     timer_init(100);
-
+    
     unsigned int user_size =
         _binary_build_user_bin_end -
         _binary_build_user_bin_start;
@@ -72,18 +82,11 @@ void kernel_main(){
         }
     }
 
-    print("PID 1: ", WHITE);
-    print_hex_dword((unsigned int)pid1);
-    putchar('\n');
-
-    print("PID 2: ", WHITE);
-    print_hex_dword((unsigned int)pid2);
-    putchar('\n');
 
     enable_interrupts();
-
-    for (;;) {
-        __asm__ volatile ("hlt");
+    process_run(pid1);
+    while (1) {
+    __asm__ volatile ("hlt");
     }
 }
 

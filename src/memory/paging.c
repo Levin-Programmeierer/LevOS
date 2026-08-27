@@ -20,7 +20,7 @@ void init_paging(void)
     }
 
     page_directory[0] =
-        (unsigned int)page_table | 0x03;
+        (unsigned int)page_table | 0x03; // 0x03 = 00000011 Present and Read/Writable
 
     load_page_directory(page_directory);
 }

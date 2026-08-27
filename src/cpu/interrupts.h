@@ -11,4 +11,6 @@ struct cpu_context *irq_handler(
     struct cpu_context *context
 );
 
+extern unsigned char kernel_stack[4096];
+
 #endif
