@@ -3,6 +3,7 @@
 #include "shell/shell.h"
 #include "drivers/io.h"
 #include "memory/gdt.h"
+#include "cpu/interrupts.h"
 #include <stdint.h>
 
 extern unsigned char LIGHT_BLUE;
@@ -23,6 +24,10 @@ extern unsigned char GRAY;
 
 void kernel_main(uint32_t mb_addr) {
     init_GDT();
+    init_IDT();
+    picremap();
+    init_keyboard();
+    enable_interrupts();
     shell();
 }
 
