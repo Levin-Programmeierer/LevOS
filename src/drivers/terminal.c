@@ -142,3 +142,22 @@ void print_hex_dword(unsigned int value) {
         putchar(hex[(value >> i) & 0xF]);
     }
 }
+
+void print_number(unsigned int value) {
+    char digits[10];
+    int i = 0;
+
+    if (value == 0) {
+        putchar('0');
+        return;
+    }
+
+    while (value > 0) {
+        digits[i++] = '0' + (value % 10);
+        value /= 10;
+    }
+
+    while (i > 0) {
+        putchar(digits[--i]);
+    }
+}

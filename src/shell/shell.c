@@ -75,7 +75,36 @@ void process_command(void){
         //minutes
         select_cmos_reg(0x02);
         uint8_t minutes = read_cmos();
-        print(minutes, YELLOW);
+        //hours
+        select_cmos_reg(0x04);
+        uint8_t hours = read_cmos();
+        //Day of month
+        select_cmos_reg(0x07);
+        uint8_t monthday = read_cmos();
+        // Month
+        select_cmos_reg(0x08);
+        uint8_t month = read_cmos();
+        // Year -- first 2 digits
+        select_cmos_reg(0x09);
+        uint8_t year = read_cmos();
+        // century
+        select_cmos_reg(0x32);
+        uint8_t century = read_cmos();
+
+        print("Year: ", YELLOW);
+        print_hex_byte(century);
+        print_hex_byte(year);
+        print("\nDate: ", YELLOW);
+        print_hex_byte(month);
+        putchar('/');
+        print_hex_byte(monthday);
+        print("\nTime: ", YELLOW);
+        print_hex_byte(hours);
+        putchar(':');
+        print_hex_byte(minutes);
+        putchar(':');
+        print_hex_byte(seconds);
+
     }
     else if(strcmp(command_buffer, "about") == 0){
         print("--LevOS - Shell 0.1--", YELLOW);
@@ -93,12 +122,12 @@ void process_command(void){
         print(".", (LIGHT_GREEN << 4));
         print(".", (GRAY << 4));
         print(".", (DARK_GRAY << 4));
-        print(".", (LIGHT_PURPLE << 4));
+        print(".\n", (LIGHT_PURPLE << 4));
     }
     
     else {
-        print("Unknown command: ", 0xAA);
-        print(command, 0xAA);
+        print("Unknown command: ", RED);
+        print(command, YELLOW);
     }
 }
 

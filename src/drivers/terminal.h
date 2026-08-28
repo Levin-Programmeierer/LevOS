@@ -13,6 +13,7 @@ void clear(uint16_t color);
 void backspace(void);
 void print_hex_byte(unsigned char value);
 void print_hex_dword(unsigned int value);
+void print_number(unsigned int value);
 
 extern uint16_t WHITE;
 extern uint16_t BLUE;
