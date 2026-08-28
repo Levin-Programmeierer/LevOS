@@ -108,6 +108,9 @@ void process_command(void){
         print("\nabout -- shows information about this OS", WHITE);
         print("\nls [path] -- list a FAT32 directory", WHITE);
         print("\ncat path -- print a FAT32 file", WHITE);
+        print("\nclock -- show current time", WHITE);
+        print("\necho -- repeats your words", WHITE);
+        print("\nmemory -- shows memory size in Bytes\n", WHITE);
     }
     else if (strcmp(command, "clear") == 0) {
         clear(background);
@@ -151,7 +154,13 @@ void process_command(void){
         print_hex_byte(minutes);
         putchar(':');
         print_hex_byte(seconds);
+        putchar('\n');
 
+    } else if(strcmp(command, "memory") == 0){
+        uint32_t memory = get_cmos_memory_size;
+        print("Available RAM: ", YELLOW);
+        print_number(memory);
+        print(" Bytes\n", GREEN);
     }
     else if(strcmp(command, "about") == 0){
         print("--LevOS - Shell 0.1--", YELLOW);
