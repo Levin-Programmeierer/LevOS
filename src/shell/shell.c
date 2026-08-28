@@ -1,6 +1,9 @@
 #include "drivers/keyboard.h"
-#include "drivers/terminal.h"
 #include "cpu/interrupts.h"
+#include <stdint.h>
+#include "drivers/terminal.h"
+#include "drivers/cmos.h"
+#include <stdint.h>
 
 #define COMMAND_BUFFER_SIZE 128
 #define COMMAND_SIZE 32
@@ -15,25 +18,12 @@ char command[COMMAND_SIZE];
 char argument[PARAMETER_SIZE];
 unsigned int command_length = 0;
 
-extern unsigned char LIGHT_BLUE;
-extern unsigned char LIGHT_CYAN;
-extern unsigned char LIGHT_GREEN;
-extern unsigned char LIGHT_RED;
-extern unsigned char LIGHT_PURPLE;
-extern unsigned char WHITE;
-extern unsigned char RED;
-extern unsigned char BLUE;
-extern unsigned char GREEN;
-extern unsigned char CYAN;
-extern unsigned char BROWN;
-extern unsigned char PURPLE;
-extern unsigned char YELLOW;
-extern unsigned char DARK_GRAY;
-extern unsigned char GRAY;
+uint16_t background = 0x0;
 
 void shell(void){
+    clear(background);
     print("----------------------------------LevShell 0.1----------------------------------", (BLUE << 4) | WHITE); // 12 characters long
-    print("\n> ", WHITE);
+    print("\n> ", (background << 4) | WHITE);
     for (;;) {
         char c = keyboard_getchar();
 
@@ -46,7 +36,7 @@ void shell(void){
             command_buffer[command_length] = '\0';
             process_command();
             command_length = 0;
-            print("\n> ", 0x0F);
+            print("\n> ", (background << 4) | WHITE);
         }
         else if (c == '\b') {
             if (command_length > 0) {
@@ -73,12 +63,20 @@ void process_command(void){
         print("\nabout -- shows information about this OS", WHITE);
     }
     else if (strcmp(command_buffer, "clear") == 0) {
-        clear();
+        clear(background);
         print("----------------------------------LevShell 0.1----------------------------------", (BLUE << 4) | WHITE);
     }
     else if(strcmp(command, "echo") == 0){
-        print(argument, 0xAA);
-    } 
+        print(argument, 0x0F);
+    } else if(strcmp(command_buffer, "clock") == 0){
+        //seconds
+        select_cmos_reg(0x00);
+        uint8_t seconds = read_cmos();
+        //minutes
+        select_cmos_reg(0x02);
+        uint8_t minutes = read_cmos();
+        print(minutes, YELLOW);
+    }
     else if(strcmp(command_buffer, "about") == 0){
         print("--LevOS - Shell 0.1--", YELLOW);
         print("\nWork in progress\n", RED);

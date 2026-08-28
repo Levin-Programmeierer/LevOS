@@ -16,7 +16,8 @@ OBJS = \
 	build/interrupts.o \
 	build/shell.o \
 	build/gdt.o \
-	build/gdt_asm.o
+	build/gdt_asm.o \
+	build/cmos.o
 
 all: os.iso
 
@@ -43,6 +44,10 @@ build/keyboard.o: src/drivers/keyboard.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/gdt.o: src/memory/gdt.c
+	mkdir -p build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+build/cmos.o: src/drivers/cmos.c
 	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@
 

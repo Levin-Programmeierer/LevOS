@@ -1,24 +1,26 @@
 #include "drivers/terminal.h"
 #include "drivers/io.h"
+#include <stdint.h>
 
 int cursor_x = 0;
 int cursor_y = 0;
 
-unsigned char WHITE = 0x0F;
-unsigned char BLUE = 0x01;
-unsigned char GREEN = 0x02;
-unsigned char CYAN = 0x03;
-unsigned char RED = 0x04;
-unsigned char PURPLE = 0x05;
-unsigned char BROWN = 0x06;
-unsigned char GRAY = 0x07;
-unsigned char DARK_GRAY = 0x08;
-unsigned char LIGHT_BLUE = 0x09;
-unsigned char LIGHT_GREEN = 0x0A;
-unsigned char LIGHT_CYAN = 0x0B;
-unsigned char LIGHT_RED = 0x0C;
-unsigned char LIGHT_PURPLE = 0x0D;
-unsigned char YELLOW = 0x0E;
+uint16_t BLACK = 0x00;
+uint16_t WHITE = 0x0F;
+uint16_t BLUE = 0x01;
+uint16_t GREEN = 0x02;
+uint16_t CYAN = 0x03;
+uint16_t RED = 0x04;
+uint16_t PURPLE = 0x05;
+uint16_t BROWN = 0x06;
+uint16_t GRAY = 0x07;
+uint16_t DARK_GRAY = 0x08;
+uint16_t LIGHT_BLUE = 0x09;
+uint16_t LIGHT_GREEN = 0x0A;
+uint16_t LIGHT_CYAN = 0x0B;
+uint16_t LIGHT_RED = 0x0C;
+uint16_t LIGHT_PURPLE = 0x0D;
+uint16_t YELLOW = 0x0E;
 
 volatile unsigned short *video =
     (unsigned short *)0xB8000;
@@ -47,10 +49,10 @@ void terminal_init(void) {
     cursor_x = 0;
     cursor_y = 0;
 
-    clear();
+    clear(BLACK);
 }
 
-void print(const char *text, unsigned char color) {
+void print(const char *text, uint16_t color) {
     for (int i = 0; i < 100 && text[i] != '\0'; i++) {
 
         if (text[i] == '\n') {
@@ -103,9 +105,9 @@ void putchar(char c) {
     scroll();
 }
 
-void clear(void) {
+void clear(uint16_t color) {
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) {
-        video[i] = 0x0F20;
+        video[i] = (color << 12)| (0x0020);
     }
 
     cursor_x = 0;
